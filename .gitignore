@@ -1,0 +1,36 @@
+# dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# next
+.next/
+out/
+next-env.d.ts
+*.tsbuildinfo
+
+# runtime data (SQLite database + owner uploads)
+data/
+public/uploads/*
+!public/uploads/.gitkeep
+
+# generated placeholder art (rebuilt by `npm run assets`)
+public/img/generated/
+
+# secrets
+.env
+.env.local
+.env*.local
+ADMIN-CREDENTIALS.txt
+
+# os / editor
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# logs
+npm-debug.log*
+yarn-error.log*
+*.log

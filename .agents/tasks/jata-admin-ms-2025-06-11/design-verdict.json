@@ -1,0 +1,105 @@
+{
+  "verdict": "CHANGES_REQUESTED",
+  "reviewDoc": "c:\\Users\\Eliza\\Desktop\\Jata\\.agents\\tasks\\jata-admin-ms-2025-06-11\\design-review.md",
+  "round": 2,
+  "designRevision": 2,
+  "counts": { "high": 0, "medium": 3, "nit": 9 },
+  "findings": [
+    {
+      "id": 1,
+      "severity": "MEDIUM",
+      "title": "Redirecting save forms do not clear on ?saved=1; a second Save duplicates a row and a post-edit Save inserts instead of updating",
+      "location": "design.md > Form submission mechanics > 'Post-submit behaviour, by action kind' table, row 1; Invariants table row 'A successful create does not become two rows'",
+      "problem": "The design closes the duplicate-create hole for saveCategoryAction/saveZoneAction and assumes 'navigation happens' closes it for saveMenuItemAction, saveBannerAction and savePromotionAction. A server-action redirect to the same route (/ms/menu -> /ms/menu?saved=1) is a soft navigation: React reconciles the same client form component at the same tree position, so it updates rather than remounts and uncontrolled inputs keep their values (defaultValue is only written on mount). Create -> Save -> Save creates a second row, with uniqueSlug() minting 'spanish-latte-2' silently. Worse, the redirect drops ?edit=<id>, so after editing item 5 the page re-renders in create mode and the conditional hidden id input is removed while every visible field still shows item 5's data, so the next Save inserts a copy instead of updating.",
+      "fix": "Force a remount by keying the form on the page state that changed, in menu/banners/promotions pages: const editId = positiveInt(sp.edit); const saved = sp.saved !== undefined; <MenuItemForm key={editId ? `edit-${editId}` : saved ? 'new-saved' : 'new'} initial={item} categories={categories} />. Add a fourth row to the post-submit table ('redirecting actions: the page must remount the form via key; the redirect alone does not clear it'), extend the 'A successful create does not become two rows' invariant to name the page's key as owner for these three forms, and add a manual-pass step: edit an item, Save, Save again untouched, confirm no second row."
+    },
+    {
+      "id": 2,
+      "severity": "MEDIUM",
+      "title": "The nine form components have no pinned props, and the create/edit discriminator is named two different things",
+      "location": "design.md > Form submission mechanics (PromotionForm({ initial /* Promotion | null */, ... })) and the post-submit table (!initial) vs Page specifications > /ms/menu (<MenuItemForm item={...} categories={...} />); the other seven components appear only as filenames in 'Route tree and files to create'",
+      "problem": "The discriminator is behavioural, not cosmetic: it drives whether a successful save resets the form (state?.ok && !initial), whether the hidden id is rendered, and the page key in finding 1. With 'initial' in one section and 'item' in another, and the collection props elided as a literal '...', the implementer must guess which is authoritative, and the two readings yield different component APIs. admin-format.ts got a fully pinned surface in this revision; its nine consumers did not.",
+      "fix": "Pin one convention and apply it everywhere, e.g. type FormProps<T> = { initial: T | null }; LoginForm { changed?: boolean }; PasswordForm {}; MenuItemForm FormProps<MenuItem> & { categories: Category[] }; CategoryForm FormProps<Category>; BannerForm FormProps<Banner>; PromotionForm FormProps<Promotion> & { categories: Category[]; items: MenuItemWithCategory[] }; ZoneForm FormProps<DeliveryZone>; DeliverySettingsForm { settings: SiteSettings }; SettingsForm { settings: SiteSettings }. Change the /ms/menu line to <MenuItemForm initial={item} categories={categories} /> so the page specs and the mechanics section agree, and note that the two update-only forms take settings rather than initial because they have no create mode."
+    },
+    {
+      "id": 3,
+      "severity": "MEDIUM",
+      "title": "clampSearch / positiveInt signatures are wrong against what Next.js puts in searchParams",
+      "location": "design.md > Shared components > src/lib/admin-format.ts public surface; Input validation > search-param table",
+      "problem": "A Next.js searchParams value is string | string[] | undefined - a repeated key yields an array. The design pins clampSearch(q: string | undefined) and positiveInt(v: string | undefined) and types page props as Promise<{ q?: string }>, so TypeScript cannot catch the mismatch and npm run typecheck (the primary automated gate) passes. At runtime /ms/orders?q=a&q=b hands an array to clampSearch, whose pinned signature invites (q ?? '').trim(); Array.prototype.trim does not exist, so the page throws to /ms/error.tsx. positiveInt survives by luck (Number(['1','2']) -> NaN -> null), which makes the inconsistency easy to miss.",
+      "fix": "Widen both to the real contract and normalise to the first value: type Param = string | string[] | undefined; clampSearch(q: Param, max = 60) { const raw = Array.isArray(q) ? (q[0] ?? '') : (q ?? ''); return raw.trim().slice(0, max); } positiveInt(v: Param) { const raw = Array.isArray(v) ? (v[0] ?? '') : (v ?? ''); const n = Number(raw); return Number.isInteger(n) && n > 0 ? n : null; } Type the page props to match (searchParams: Promise<{ q?: string | string[] }>, same for status/edit/saved) and add a row to the search-param table: 'a repeated key arrives as an array; take the first value'."
+    },
+    {
+      "id": 4,
+      "severity": "NIT",
+      "title": "role=\"alert\" with aria-live=\"polite\" is self-cancelling",
+      "location": "design.md > Error handling table (server action business rule row); Accessibility and mobile",
+      "problem": "role=\"alert\" carries an implicit aria-live=\"assertive\"; an explicit aria-live=\"polite\" overrides it, so the markup asks for an alert and then downgrades it.",
+      "fix": "Use role=\"alert\" alone for validation errors and the already specified role=\"status\" for the saved/changed banners. Drop aria-live from the error region."
+    },
+    {
+      "id": 5,
+      "severity": "NIT",
+      "title": "The title.template on src/app/ms/layout.tsx is dead code as specified",
+      "location": "design.md > Gating structure > src/app/ms/layout.tsx snippet and its justification",
+      "problem": "template only applies to children that export a title. No /ms page spec exports metadata, so every screen renders title.default ('Jata admin') and the template never fires, making the stated justification moot.",
+      "fix": "Either drop the template, or add the missing per-page metadata and keep it: export const metadata = { title: 'Orders' } in (dashboard)/orders/page.tsx, and list the nine title strings so they are not invented twice."
+    },
+    {
+      "id": 6,
+      "severity": "NIT",
+      "title": "max_uses with min=\"0\" lets a manager silently kill a promotion",
+      "location": "design.md > Money > number-input attributes table, row 'eta_minutes, max_uses'",
+      "problem": "The design's stated principle is that the browser should reject what the server rejects, but the server accepts 0 and 0 is semantically fatal: listPublicPromotions() filters on max_uses === null || usage_count < max_uses, so max_uses = 0 means the offer can never apply, with no error and a row reading '0 / 0'. eta_minutes = 0 is harmless by contrast.",
+      "fix": "Split the row: eta_minutes keeps min=\"0\"; max_uses gets min=\"1\" with help text 'Leave blank for unlimited.'"
+    },
+    {
+      "id": 7,
+      "severity": "NIT",
+      "title": "List rows carry two or three sibling forms and the design never forbids nesting them",
+      "location": "design.md > Shared components > ConfirmDelete; rows on /ms/menu, /ms/banners, /ms/promotions, /ms/customers, /ms/orders",
+      "problem": "ConfirmDelete contains its own <form> and no row markup is given. Nested <form> elements are invalid HTML - the parser drops the inner one, so a 'Yes, delete X' button placed inside the inline save form on /ms/customers would submit the save action instead of the delete. Silent and nothing in the design rules it out.",
+      "fix": "Add to the ConfirmDelete spec: 'ConfirmDelete renders a <form>, so it must always be a sibling of any other form in the row, never a descendant. Rows with an inline edit form place the save form and the delete disclosure in the same flex container, not one inside the other.'"
+    },
+    {
+      "id": 8,
+      "severity": "NIT",
+      "title": "Orders phone link's visible text unspecified; existing formatKenyanPhone() helper overlooked",
+      "location": "design.md > Page specifications > /ms/orders",
+      "problem": "The href is correct (normalizeKenyanPhone() stores 254XXXXXXXXX, digits only - verified), but the link text is never stated, so rows will show the raw 254712345678. src/lib/whatsapp.ts already exports formatKenyanPhone('254712345678') -> '+254 712 345 678', the project-consistent display form.",
+      "fix": "Specify <a href={`tel:+${order.phone}`}>{formatKenyanPhone(order.phone)}</a> and add formatKenyanPhone to the list of existing helpers the admin reuses (pure function, no server-only, safe in either component kind)."
+    },
+    {
+      "id": 9,
+      "severity": "NIT",
+      "title": "centsToShillingInput is lossy for sub-shilling values and the design does not say so",
+      "location": "design.md > Money > centsToShillingInput snippet; Testability and verification (round-trip claim)",
+      "problem": "Every seeded price is KES(n) = n * 100 and step=\"1\" keeps UI writes whole, so the round-trip is clean today. But shillingsToCents() is a server function: a crafted POST of 350.49 stores 35049 and the next save through the form silently rewrites it to 35000. The design asserts the round-trip without stating the rounding direction or that it is one-way.",
+      "fix": "Add a sentence under the money table: 'Stored cents are assumed to be whole shillings; centsToShillingInput rounds to the nearest shilling, so a value that is not a multiple of 100 is normalised on the next save. Accepted - no UI path can create one.' Keep Math.round."
+    },
+    {
+      "id": 10,
+      "severity": "NIT",
+      "title": "Truncated lists give no sign that they are truncated",
+      "location": "design.md > Page specifications > /ms/orders (limit 100) and /ms/customers (limit 200); Out of scope",
+      "problem": "On a busy week the owner sees 100 orders with no indication that older ones exist, which reads as data loss rather than a limit.",
+      "fix": "Specify the disclosure: when orders.length === 100, render under the table 'Showing the 100 most recent orders. Use the search box to find older ones.' Same for customers at 200."
+    },
+    {
+      "id": 11,
+      "severity": "NIT",
+      "title": "The design never states what happens to the old /admin URL",
+      "location": "design.md > /admin -> /ms path migration",
+      "problem": "After the rewrite /admin matches no route and falls through to src/app/not-found.tsx (verified: plain card, no storefront chrome, no admin link). That is the right outcome, but it is implicit, and a helpful implementer may add a /admin -> /ms redirect to next.config.ts, re-exposing the path the user asked to retire.",
+      "fix": "Add one line: '/admin is deliberately left to 404 via the existing root not-found.tsx. Do NOT add a redirect, rewrite or alias from /admin - that would defeat the point of moving the URL.'"
+    },
+    {
+      "id": 12,
+      "severity": "NIT",
+      "title": "ui.tsx, SubmitButton and ConfirmDelete prop surfaces unpinned; variant? has no enumerated values",
+      "location": "design.md > Shared components",
+      "problem": "SubmitButton is { children, pending?: boolean, className?, variant? } with no values for variant; ConfirmDelete is { action, id, label, warning? } with no type for action; PageHeader, StatCard, SavedNotice, StatusPill and Money have no props listed at all. Lower stakes than finding 2 because these are presentational, but variant? with no enumeration is a straight ambiguity and action has to accept two shapes.",
+      "fix": "Pin them: type Variant = 'primary' | 'outline' | 'ghost' (-> .btn-primary/.btn-outline/.btn-ghost); SubmitButton { children: React.ReactNode; pending?: boolean; className?: string; variant?: Variant }; ConfirmDelete { action: (form: FormData) => Promise<void>; id: number; label: string; warning?: string }; PageHeader { kicker?: string; title: string; description?: string }; StatCard { label: string; value: string; hint?: string; href?: string }; SavedNotice { show: boolean; children: React.ReactNode }; StatusPill { status: OrderStatus } with new->caramel, confirmed->espresso, completed->leaf, cancelled->berry; Money { cents: number; currency: string }. logoutAction's () => Promise<void> is assignable to ConfirmDelete's action type, so one type covers both."
+    }
+  ]
+}

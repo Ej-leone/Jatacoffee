@@ -1,0 +1,315 @@
+@import "tailwindcss";
+
+/* ------------------------------------------------------------------ *
+ * Design tokens
+ *
+ * Fonts are deliberately system stacks: zero font downloads keeps the
+ * site fast on a 3G connection and on a tight data bundle.
+ * ------------------------------------------------------------------ */
+
+@theme {
+  --color-cream-50: #fdfaf6;
+  --color-cream-100: #f8f1e7;
+  --color-cream-200: #efe2d2;
+  --color-cream-300: #e2cfb8;
+
+  --color-espresso-500: #7a5436;
+  --color-espresso-600: #5a3a24;
+  --color-espresso-700: #3b2416;
+  --color-espresso-800: #2a1a12;
+  --color-espresso-900: #1c1008;
+
+  --color-caramel-300: #efc98a;
+  --color-caramel-400: #d9a54b;
+  --color-caramel-500: #b06c2e;
+  --color-caramel-600: #8d5220;
+
+  --color-leaf-500: #2f7d5d;
+  --color-leaf-600: #1f4d3c;
+  --color-berry-500: #a62f52;
+
+  --font-display:
+    Georgia, "Iowan Old Style", "Palatino Linotype", "Times New Roman", serif;
+  --font-sans:
+    system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+    "Noto Sans", sans-serif;
+
+  --radius-card: 1rem;
+
+  --shadow-soft: 0 1px 2px rgb(28 16 8 / 0.05), 0 8px 24px -12px rgb(28 16 8 / 0.18);
+  --shadow-lift: 0 2px 4px rgb(28 16 8 / 0.06), 0 18px 40px -16px rgb(28 16 8 / 0.28);
+
+  --animate-rise: rise 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  --animate-fade: fade 0.2s ease-out;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * Base
+ * ------------------------------------------------------------------ */
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+    scroll-padding-top: 5.5rem;
+  }
+
+  body {
+    background-color: var(--color-cream-50);
+    color: var(--color-espresso-800);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-wrap: pretty;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    letter-spacing: -0.015em;
+    text-wrap: balance;
+  }
+
+  /* Visible, high-contrast focus for keyboard users everywhere. */
+  :focus-visible {
+    outline: 3px solid var(--color-caramel-500);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  /* Respect the OS "reduce motion" setting. */
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  /* Hide scrollbars on the horizontal category rail without losing scrolling. */
+  .no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * Components
+ * ------------------------------------------------------------------ */
+
+@layer components {
+  .container-page {
+    width: 100%;
+    margin-inline: auto;
+    max-width: 75rem;
+    padding-inline: 1rem;
+  }
+
+  @media (min-width: 640px) {
+    .container-page {
+      padding-inline: 1.5rem;
+    }
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 9999px;
+    font-weight: 600;
+    font-size: 0.9375rem;
+    line-height: 1;
+    padding: 0.8125rem 1.25rem;
+    transition:
+      background-color 0.15s ease,
+      color 0.15s ease,
+      transform 0.15s ease,
+      box-shadow 0.15s ease;
+    /* Comfortable tap target on mobile. */
+    min-height: 2.875rem;
+  }
+
+  .btn:active {
+    transform: translateY(1px);
+  }
+
+  .btn-primary {
+    background-color: var(--color-espresso-800);
+    color: var(--color-cream-50);
+    box-shadow: var(--shadow-soft);
+  }
+  .btn-primary:hover {
+    background-color: var(--color-espresso-900);
+  }
+
+  .btn-accent {
+    background-color: var(--color-caramel-500);
+    color: #fff;
+    box-shadow: var(--shadow-soft);
+  }
+  .btn-accent:hover {
+    background-color: var(--color-caramel-600);
+  }
+
+  .btn-whatsapp {
+    background-color: #1faa53;
+    color: #fff;
+    box-shadow: var(--shadow-soft);
+  }
+  .btn-whatsapp:hover {
+    background-color: #178c43;
+  }
+
+  .btn-outline {
+    border: 1.5px solid var(--color-cream-300);
+    background-color: #fff;
+    color: var(--color-espresso-800);
+  }
+  .btn-outline:hover {
+    border-color: var(--color-caramel-400);
+    background-color: var(--color-cream-100);
+  }
+
+  .btn-ghost {
+    color: var(--color-espresso-700);
+  }
+  .btn-ghost:hover {
+    background-color: var(--color-cream-100);
+  }
+
+  .btn:disabled,
+  .btn[aria-disabled="true"] {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .card {
+    background-color: #fff;
+    border: 1px solid var(--color-cream-200);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-soft);
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    border-radius: 9999px;
+    padding: 0.3125rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+  }
+
+  .field-label {
+    display: block;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--color-espresso-700);
+    margin-bottom: 0.375rem;
+  }
+
+  .field {
+    width: 100%;
+    border-radius: 0.625rem;
+    border: 1.5px solid var(--color-cream-300);
+    background-color: #fff;
+    padding: 0.6875rem 0.875rem;
+    /* 16px prevents iOS Safari from zooming when a field is focused. */
+    font-size: 1rem;
+    color: var(--color-espresso-900);
+    transition:
+      border-color 0.15s ease,
+      box-shadow 0.15s ease;
+  }
+
+  .field::placeholder {
+    color: color-mix(in srgb, var(--color-espresso-500) 55%, white);
+  }
+
+  .field:focus {
+    border-color: var(--color-caramel-400);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-caramel-400) 28%, transparent);
+    outline: none;
+  }
+
+  .field-error {
+    border-color: var(--color-berry-500);
+  }
+
+  .prose-note {
+    font-size: 0.875rem;
+    line-height: 1.6;
+    color: var(--color-espresso-600);
+  }
+
+  /* Admin table shell, reused across every management screen. */
+  .admin-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 0.875rem;
+  }
+  .admin-table th {
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-espresso-500);
+    padding: 0.625rem 0.75rem;
+    border-bottom: 1px solid var(--color-cream-200);
+    white-space: nowrap;
+  }
+  .admin-table td {
+    padding: 0.75rem;
+    border-bottom: 1px solid var(--color-cream-100);
+    vertical-align: middle;
+  }
+  .admin-table tbody tr:hover {
+    background-color: var(--color-cream-50);
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * Utilities
+ * ------------------------------------------------------------------ */
+
+@utility safe-bottom {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + var(--spacing, 0.25rem) * 4);
+}
+
+@utility text-balance-tight {
+  text-wrap: balance;
+  letter-spacing: -0.02em;
+}
