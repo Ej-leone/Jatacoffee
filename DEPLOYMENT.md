@@ -2,6 +2,20 @@
 
 Everything needed to take `jata-cafe` from a local checkout to a live site on your own domain.
 
+> **⚠️ This document is out of date and is being rewritten.**
+>
+> It describes the original architecture: SQLite on a local disk, served by a long-running Node
+> process on a VPS. On that basis §1 states the app cannot be deployed to Vercel, which was true
+> at the time.
+>
+> The app is being migrated to **Supabase Postgres + Supabase Storage**, which removes the
+> local-disk dependency and makes **Vercel** a valid target. Until that migration lands on `main`,
+> the instructions below still match the code — `better-sqlite3` is still the database driver, so
+> a Vercel deployment would currently fail. Do not follow the VPS instructions if you intend to
+> deploy to Vercel; wait for the rewrite.
+>
+> Tracking: branch `feat/supabase-migration`.
+
 Written against the repository as it stands: Next.js `16.4.0` (App Router), React `19.3`, TypeScript, Tailwind CSS v4, `better-sqlite3` `13.0.3`, `sharp` `0.35.5`.
 
 ---
