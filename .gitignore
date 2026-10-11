@@ -23,6 +23,9 @@ public/img/generated/
 .env*.local
 ADMIN-CREDENTIALS.txt
 
+# git worktrees used for agent branches
+.worktrees/
+
 # os / editor
 .DS_Store
 Thumbs.db
