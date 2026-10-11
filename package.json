@@ -10,7 +10,10 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "assets": "node scripts/generate-placeholders.mjs"
+    "assets": "node scripts/generate-placeholders.mjs",
+    "db:migrate": "node --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/db-apply.mjs supabase/migrations/0001_init.sql",
+    "db:seed": "node --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/seed.mjs",
+    "db:check": "node --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/check-db.mjs"
   },
   "dependencies": {
     "better-sqlite3": "^13.0.3",
