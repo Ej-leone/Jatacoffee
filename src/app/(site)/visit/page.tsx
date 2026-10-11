@@ -18,7 +18,7 @@ export const metadata: Metadata = {
 };
 
 export default async function VisitPage() {
-  const settings = getSettings();
+  const settings = await getSettings();
 
   return (
     <>

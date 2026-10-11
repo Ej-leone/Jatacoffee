@@ -19,7 +19,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/visit`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },
   ];
 
-  const categoryRoutes: MetadataRoute.Sitemap = listCategories().map((category) => ({
+  const categoryRoutes: MetadataRoute.Sitemap = (await listCategories()).map((category) => ({
     url: `${SITE_URL}/menu?category=${category.slug}`,
     lastModified: now,
     changeFrequency: "weekly",

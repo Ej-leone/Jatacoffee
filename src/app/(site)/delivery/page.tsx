@@ -19,8 +19,8 @@ export const metadata: Metadata = {
 };
 
 export default async function DeliveryPage() {
-  const settings = getSettings();
-  const zones = listZones({ activeOnly: true });
+  const settings = await getSettings();
+  const zones = await listZones({ activeOnly: true });
   const flat = settings.delivery_mode === "flat";
 
   return (

@@ -8,9 +8,9 @@ import { buildEnquiryUrl } from "@/lib/whatsapp";
 import { AnnouncementBar } from "@/components/announcement-bar";
 
 export default async function SiteLayout({ children }: { children: React.ReactNode }) {
-  const settings = getSettings();
-  const zones = listZones({ activeOnly: true });
-  const promotions = listPublicPromotions();
+  const settings = await getSettings();
+  const zones = await listZones({ activeOnly: true });
+  const promotions = await listPublicPromotions();
 
   const config: StoreConfig = {
     currency: settings.currency,
@@ -48,6 +48,9 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
       addressCountry: "KE",
     },
     hasMap: settings.maps_url || undefined,
+    sameAs: [settings.instagram_url, settings.tiktok_url, settings.facebook_url].filter(
+      Boolean,
+    ),
     url: process.env.NEXT_PUBLIC_SITE_URL || "https://jatacafe.co.ke",
     hasMenu: `${process.env.NEXT_PUBLIC_SITE_URL || "https://jatacafe.co.ke"}/menu`,
     acceptsReservations: false,

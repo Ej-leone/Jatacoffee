@@ -1,7 +1,8 @@
 import { createHash, randomBytes } from "node:crypto";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { db, hashPassword, verifyPassword } from "./db";
+import { sql } from "./db";
+import { hashPassword, verifyPassword } from "./password";
 import type { AdminUser } from "./types";
 
 const COOKIE_NAME = "jata_session";
@@ -21,12 +22,13 @@ export async function createSession(userId: number): Promise<void> {
   const token = randomBytes(32).toString("base64url");
   const expires = new Date(Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000);
 
-  db()
-    .prepare("INSERT INTO sessions (token_hash, user_id, expires_at) VALUES (?, ?, ?)")
-    .run(sha256(token), userId, expires.toISOString());
+  await sql`
+    insert into sessions (token_hash, user_id, expires_at)
+    values (${sha256(token)}, ${userId}, ${expires})
+  `;
 
   // Housekeeping: drop anything already expired.
-  db().prepare("DELETE FROM sessions WHERE expires_at < datetime('now')").run();
+  await sql`delete from sessions where expires_at < now()`;
 
   const jar = await cookies();
   jar.set(COOKIE_NAME, token, {
@@ -42,7 +44,7 @@ export async function destroySession(): Promise<void> {
   const jar = await cookies();
   const token = jar.get(COOKIE_NAME)?.value;
   if (token) {
-    db().prepare("DELETE FROM sessions WHERE token_hash = ?").run(sha256(token));
+    await sql`delete from sessions where token_hash = ${sha256(token)}`;
   }
   jar.delete(COOKIE_NAME);
 }
@@ -58,16 +60,19 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
   const token = jar.get(COOKIE_NAME)?.value;
   if (!token) return null;
 
-  const row = db()
-    .prepare(
-      `SELECT u.id, u.email, u.name, u.role, u.must_change_password
-         FROM sessions s
-         JOIN admin_users u ON u.id = s.user_id
-        WHERE s.token_hash = ? AND s.expires_at > datetime('now')`,
-    )
-    .get(sha256(token)) as SessionUser | undefined;
+  const rows = await sql<SessionUser[]>`
+    select u.id,
+           u.email,
+           u.name,
+           u.role,
+           u.must_change_password::int as must_change_password
+      from sessions s
+      join admin_users u on u.id = s.user_id
+     where s.token_hash = ${sha256(token)}
+       and s.expires_at > now()
+  `;
 
-  return row ?? null;
+  return rows[0] ?? null;
 }
 
 /**
@@ -84,50 +89,49 @@ export async function requireAdmin(): Promise<SessionUser> {
  * Login
  * ------------------------------------------------------------------ */
 
-function tooManyAttempts(identifier: string): boolean {
-  const row = db()
-    .prepare(
-      `SELECT COUNT(*) AS n FROM login_attempts
-        WHERE identifier = ?
-          AND created_at > datetime('now', ?)`,
-    )
-    .get(identifier, `-${ATTEMPT_WINDOW_MINUTES} minutes`) as { n: number };
-  return row.n >= MAX_ATTEMPTS;
+async function tooManyAttempts(identifier: string): Promise<boolean> {
+  const rows = await sql<{ n: number }[]>`
+    select count(*)::int as n
+      from login_attempts
+     where identifier = ${identifier}
+       and created_at > now() - make_interval(mins => ${ATTEMPT_WINDOW_MINUTES})
+  `;
+  return rows[0].n >= MAX_ATTEMPTS;
 }
 
-function recordAttempt(identifier: string): void {
-  db().prepare("INSERT INTO login_attempts (identifier) VALUES (?)").run(identifier);
-  db()
-    .prepare("DELETE FROM login_attempts WHERE created_at < datetime('now', '-1 day')")
-    .run();
+async function recordAttempt(identifier: string): Promise<void> {
+  await sql`insert into login_attempts (identifier) values (${identifier})`;
+  await sql`
+    delete from login_attempts
+     where created_at < now() - interval '1 day'
+  `;
 }
 
 export type LoginResult = { ok: true; userId: number } | { ok: false; error: string };
 
-export function attemptLogin(emailRaw: string, password: string): LoginResult {
+export async function attemptLogin(emailRaw: string, password: string): Promise<LoginResult> {
   const email = (emailRaw || "").trim().toLowerCase();
   if (!email || !password) return { ok: false, error: "Enter your email and password." };
 
-  if (tooManyAttempts(email)) {
+  if (await tooManyAttempts(email)) {
     return {
       ok: false,
       error: `Too many attempts. Wait ${ATTEMPT_WINDOW_MINUTES} minutes and try again.`,
     };
   }
 
-  const user = db()
-    .prepare("SELECT id, password_hash FROM admin_users WHERE email = ?")
-    .get(email) as { id: number; password_hash: string } | undefined;
+  const users = await sql<{ id: number; password_hash: string }[]>`
+    select id, password_hash from admin_users where email = ${email}
+  `;
+  const user = users[0];
 
   if (!user || !verifyPassword(password, user.password_hash)) {
-    recordAttempt(email);
+    await recordAttempt(email);
     return { ok: false, error: "Email or password is not correct." };
   }
 
-  db()
-    .prepare("UPDATE admin_users SET last_login_at = datetime('now') WHERE id = ?")
-    .run(user.id);
-  db().prepare("DELETE FROM login_attempts WHERE identifier = ?").run(email);
+  await sql`update admin_users set last_login_at = now() where id = ${user.id}`;
+  await sql`delete from login_attempts where identifier = ${email}`;
 
   return { ok: true, userId: user.id };
 }
@@ -144,14 +148,15 @@ export function passwordProblem(password: string): string | null {
   return null;
 }
 
-export function changePassword(
+export async function changePassword(
   userId: number,
   currentPassword: string,
   newPassword: string,
-): { ok: true } | { ok: false; error: string } {
-  const user = db()
-    .prepare("SELECT password_hash FROM admin_users WHERE id = ?")
-    .get(userId) as { password_hash: string } | undefined;
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const users = await sql<{ password_hash: string }[]>`
+    select password_hash from admin_users where id = ${userId}
+  `;
+  const user = users[0];
 
   if (!user) return { ok: false, error: "Account not found." };
   if (!verifyPassword(currentPassword, user.password_hash)) {
@@ -161,14 +166,15 @@ export function changePassword(
   const problem = passwordProblem(newPassword);
   if (problem) return { ok: false, error: problem };
 
-  db()
-    .prepare(
-      "UPDATE admin_users SET password_hash = ?, must_change_password = 0 WHERE id = ?",
-    )
-    .run(hashPassword(newPassword), userId);
+  await sql`
+    update admin_users
+       set password_hash = ${hashPassword(newPassword)},
+           must_change_password = false
+     where id = ${userId}
+  `;
 
   // Force a fresh login everywhere else.
-  db().prepare("DELETE FROM sessions WHERE user_id = ?").run(userId);
+  await sql`delete from sessions where user_id = ${userId}`;
 
   return { ok: true };
 }

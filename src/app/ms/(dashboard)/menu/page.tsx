@@ -21,12 +21,12 @@ export default async function MenuPage({
   const params = await searchParams;
   const editId = positiveInt(params.edit);
 
-  const items = listMenu({});
-  const categories = listCategories({ includeHidden: true });
-  const settings = getSettings();
+  const items = await listMenu({});
+  const categories = await listCategories({ includeHidden: true });
+  const settings = await getSettings();
   const currency = settings.currency;
 
-  const editing = editId ? getMenuItem(editId) : null;
+  const editing = editId ? await getMenuItem(editId) : null;
   const missingEdit = editId !== null && editing === null;
 
   return (

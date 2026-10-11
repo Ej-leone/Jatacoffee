@@ -19,7 +19,7 @@ export default async function LoginPage({
   if (user) redirect("/ms");
 
   const { changed } = await searchParams;
-  const settings = getSettings();
+  const settings = await getSettings();
 
   return (
     <main className="container-page flex min-h-dvh items-center justify-center py-10">

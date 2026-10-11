@@ -4,15 +4,8 @@ import type { Metadata } from "next";
 import { HeroBanners } from "@/components/hero-banners";
 import { LiveOffers } from "@/components/live-offers";
 import { MenuItemCard } from "@/components/menu-item-card";
-import { OrderTypeCta } from "@/components/order-type-cta";
-import {
-  ChevronRightIcon,
-  ClockIcon,
-  PinIcon,
-  ScooterIcon,
-  SparkIcon,
-  WhatsAppIcon,
-} from "@/components/icons";
+import { SocialSpotlight } from "@/components/social-spotlight";
+import { ChevronRightIcon, PinIcon, WhatsAppIcon } from "@/components/icons";
 import { formatMoney } from "@/lib/pricing";
 import {
   getSettings,
@@ -42,13 +35,13 @@ const CATEGORY_ART: Record<string, string> = {
 };
 
 export default async function HomePage() {
-  const settings = getSettings();
-  const banners = listBanners({ activeOnly: true });
-  const featured = listFeatured(6);
-  const categories = listCategories();
-  const promotions = listPromotions({ activeOnly: true });
-  const zones = listZones({ activeOnly: true });
-  const allItems = listMenu({ availableOnly: true });
+  const settings = await getSettings();
+  const banners = await listBanners({ activeOnly: true });
+  const featured = await listFeatured(6);
+  const categories = await listCategories();
+  const promotions = await listPromotions({ activeOnly: true });
+  const zones = await listZones({ activeOnly: true });
+  const allItems = await listMenu({ availableOnly: true });
 
   const itemNames = new Map(allItems.map((item) => [item.id, item.name]));
   const countByCategory = new Map<number, number>();
@@ -56,51 +49,9 @@ export default async function HomePage() {
     countByCategory.set(item.category_id, (countByCategory.get(item.category_id) ?? 0) + 1);
   }
 
-  const cheapestZone = zones.reduce<number | null>(
-    (min, zone) => (min === null || zone.fee_cents < min ? zone.fee_cents : min),
-    null,
-  );
-
   return (
     <>
       <HeroBanners banners={banners} />
-
-      {/* Primary conversion block, kept high on the page and above the fold on phones. */}
-      <section className="container-page mt-5">
-        <div className="card p-4 sm:p-6">
-          <h1 className="text-balance-tight font-display text-2xl font-bold leading-tight text-espresso-900 sm:text-3xl">
-            {settings.hero_kicker || "Eastleigh's favourite coffee & kitchen"}
-          </h1>
-          <p className="mt-2 max-w-2xl text-[0.9375rem] leading-relaxed text-espresso-600">
-            {settings.tagline}. Order in a minute on WhatsApp, pay cash or M-Pesa when it
-            lands. Come hungry, leave happy.
-          </p>
-
-          <OrderTypeCta className="mt-4 sm:max-w-lg" />
-
-          <ul className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-[0.8125rem] font-medium text-espresso-600">
-            <li className="flex items-center gap-1.5">
-              <ScooterIcon size={15} className="text-caramel-500" />
-              {cheapestZone !== null
-                ? `Delivery from ${formatMoney(cheapestZone, settings.currency)}`
-                : "Delivery available"}
-            </li>
-            {settings.free_delivery_threshold_cents > 0 && (
-              <li className="flex items-center gap-1.5">
-                <SparkIcon size={15} className="text-caramel-500" />
-                Free over{" "}
-                {formatMoney(settings.free_delivery_threshold_cents, settings.currency)}
-              </li>
-            )}
-            {settings.opening_hours && (
-              <li className="flex items-center gap-1.5">
-                <ClockIcon size={15} className="text-caramel-500" />
-                {settings.opening_hours}
-              </li>
-            )}
-          </ul>
-        </div>
-      </section>
 
       {/* Category rail */}
       <section aria-labelledby="categories" className="container-page mt-10">
@@ -309,6 +260,11 @@ export default async function HomePage() {
           </dl>
         </div>
       </section>
+
+      <SocialSpotlight
+        instagramUrl={settings.instagram_url}
+        tiktokUrl={settings.tiktok_url}
+      />
     </>
   );
 }

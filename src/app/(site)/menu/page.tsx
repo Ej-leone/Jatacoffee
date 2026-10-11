@@ -28,11 +28,11 @@ export default async function MenuPage({
   const { category: activeSlug = "", q = "" } = await searchParams;
   const query = q.trim();
 
-  const settings = getSettings();
-  const categories = listCategories();
-  const promotions = listPromotions({ activeOnly: true });
+  const settings = await getSettings();
+  const categories = await listCategories();
+  const promotions = await listPromotions({ activeOnly: true });
 
-  const all = listMenu({ availableOnly: true });
+  const all = await listMenu({ availableOnly: true });
   const itemNames = new Map(all.map((item) => [item.id, item.name]));
 
   const selected = categories.find((c) => c.slug === activeSlug) ?? null;

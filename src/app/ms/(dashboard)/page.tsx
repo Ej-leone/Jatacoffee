@@ -7,9 +7,9 @@ import { getDashboardStats, getSettings, listOrders } from "@/lib/queries";
 export const metadata = { title: "Dashboard" };
 
 export default async function DashboardPage() {
-  const stats = getDashboardStats();
-  const orders = listOrders({ limit: 8 });
-  const settings = getSettings();
+  const stats = await getDashboardStats();
+  const orders = await listOrders({ limit: 8 });
+  const settings = await getSettings();
   const currency = settings.currency;
 
   const maxRevenue = Math.max(1, ...stats.daily.map((d) => d.revenue_cents));

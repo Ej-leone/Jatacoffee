@@ -185,6 +185,15 @@ export function InstagramIcon({ className, size = 20 }: IconProps) {
   );
 }
 
+export function TikTokIcon({ className, size = 20 }: IconProps) {
+  return (
+    <svg {...base(size)} className={className}>
+      <path d="M14 4.5v10.2a3.3 3.3 0 1 1-2.2-3.1" />
+      <path d="M14 7.2c1.1 1.7 2.7 2.6 5 2.7" />
+    </svg>
+  );
+}
+
 export function MenuIcon({ className, size = 22 }: IconProps) {
   return (
     <svg {...base(size)} className={className} strokeWidth={2}>

@@ -87,7 +87,7 @@ export async function loginAction(
   const email = str(form, "email", 120);
   const password = str(form, "password", 200);
 
-  const result = attemptLogin(email, password);
+  const result = await attemptLogin(email, password);
   if (!result.ok) return { ok: false, error: result.error };
 
   await createSession(result.userId);
@@ -110,7 +110,7 @@ export async function changePasswordAction(
 
   if (next !== confirm) return { ok: false, error: "The new passwords do not match." };
 
-  const result = changePassword(user.id, current, next);
+  const result = await changePassword(user.id, current, next);
   if (!result.ok) return { ok: false, error: result.error };
 
   // changePassword clears all sessions, so send the owner back to the login screen.
@@ -145,9 +145,9 @@ export async function saveBannerAction(
 
   const bannerId = id(form, "id");
   if (bannerId) {
-    updateBanner(bannerId, payload);
+    await updateBanner(bannerId, payload);
   } else {
-    createBanner(payload);
+    await createBanner(payload);
   }
 
   refreshAdmin("/ms/banners");
@@ -157,7 +157,7 @@ export async function saveBannerAction(
 export async function deleteBannerAction(form: FormData): Promise<void> {
   await requireAdmin();
   const bannerId = id(form, "id");
-  if (bannerId) deleteBanner(bannerId);
+  if (bannerId) await deleteBanner(bannerId);
   refreshAdmin("/ms/banners");
 }
 
@@ -165,7 +165,7 @@ export async function toggleBannerAction(form: FormData): Promise<void> {
   await requireAdmin();
   const bannerId = id(form, "id");
   if (!bannerId) return;
-  updateBanner(bannerId, {
+  await updateBanner(bannerId, {
     title: str(form, "title", 120),
     subtitle: str(form, "subtitle", 300),
     image_url: str(form, "image_url", 400),
@@ -201,8 +201,8 @@ export async function saveCategoryAction(
   };
 
   const categoryId = id(form, "id");
-  if (categoryId) updateCategory(categoryId, payload);
-  else createCategory(payload);
+  if (categoryId) await updateCategory(categoryId, payload);
+  else await createCategory(payload);
 
   refreshAdmin("/ms/categories", "/ms/menu");
   return { ok: true, message: `Saved "${name}".` };
@@ -211,7 +211,7 @@ export async function saveCategoryAction(
 export async function deleteCategoryAction(form: FormData): Promise<void> {
   await requireAdmin();
   const categoryId = id(form, "id");
-  if (categoryId) deleteCategory(categoryId);
+  if (categoryId) await deleteCategory(categoryId);
   refreshAdmin("/ms/categories", "/ms/menu");
 }
 
@@ -247,8 +247,8 @@ export async function saveMenuItemAction(
   };
 
   const itemId = id(form, "id");
-  if (itemId) updateMenuItem(itemId, payload);
-  else createMenuItem(payload);
+  if (itemId) await updateMenuItem(itemId, payload);
+  else await createMenuItem(payload);
 
   refreshAdmin("/ms/menu");
   redirect("/ms/menu?saved=1");
@@ -258,14 +258,14 @@ export async function toggleAvailabilityAction(form: FormData): Promise<void> {
   await requireAdmin();
   const itemId = id(form, "id");
   if (!itemId) return;
-  setMenuItemAvailability(itemId, str(form, "next_state") === "1");
+  await setMenuItemAvailability(itemId, str(form, "next_state") === "1");
   refreshAdmin("/ms/menu");
 }
 
 export async function deleteMenuItemAction(form: FormData): Promise<void> {
   await requireAdmin();
   const itemId = id(form, "id");
-  if (itemId) deleteMenuItem(itemId);
+  if (itemId) await deleteMenuItem(itemId);
   refreshAdmin("/ms/menu");
 }
 
@@ -293,8 +293,8 @@ export async function saveZoneAction(
   };
 
   const zoneId = id(form, "id");
-  if (zoneId) updateZone(zoneId, payload);
-  else createZone(payload);
+  if (zoneId) await updateZone(zoneId, payload);
+  else await createZone(payload);
 
   refreshAdmin("/ms/delivery");
   return { ok: true, message: `Saved "${name}".` };
@@ -303,7 +303,7 @@ export async function saveZoneAction(
 export async function deleteZoneAction(form: FormData): Promise<void> {
   await requireAdmin();
   const zoneId = id(form, "id");
-  if (zoneId) deleteZone(zoneId);
+  if (zoneId) await deleteZone(zoneId);
   refreshAdmin("/ms/delivery");
 }
 
@@ -313,7 +313,7 @@ export async function saveDeliverySettingsAction(
 ): Promise<ActionState> {
   await requireAdmin();
 
-  updateSettings({
+  await updateSettings({
     delivery_mode: str(form, "delivery_mode", 10) === "flat" ? "flat" : "zone",
     delivery_flat_fee_cents: shillingsToCents(form, "delivery_flat_fee"),
     free_delivery_threshold_cents: shillingsToCents(form, "free_delivery_threshold"),
@@ -402,11 +402,11 @@ export async function savePromotionAction(
 
   const promoId = id(form, "id");
   try {
-    if (promoId) updatePromotion(promoId, payload);
-    else createPromotion(payload);
+    if (promoId) await updatePromotion(promoId, payload);
+    else await createPromotion(payload);
   } catch (error) {
     const message = error instanceof Error ? error.message : "";
-    if (message.includes("UNIQUE")) {
+    if (message.toLowerCase().includes("unique")) {
       return { ok: false, error: `The code "${code}" is already in use.` };
     }
     throw error;
@@ -422,10 +422,10 @@ export async function togglePromotionAction(form: FormData): Promise<void> {
   if (!promoId) return;
 
   const { getPromotion } = await import("./queries");
-  const existing = getPromotion(promoId);
+  const existing = await getPromotion(promoId);
   if (!existing) return;
 
-  updatePromotion(promoId, {
+  await updatePromotion(promoId, {
     name: existing.name,
     kind: existing.kind,
     code: existing.code,
@@ -449,7 +449,7 @@ export async function togglePromotionAction(form: FormData): Promise<void> {
 export async function deletePromotionAction(form: FormData): Promise<void> {
   await requireAdmin();
   const promoId = id(form, "id");
-  if (promoId) deletePromotion(promoId);
+  if (promoId) await deletePromotion(promoId);
   refreshAdmin("/ms/promotions");
 }
 
@@ -463,7 +463,7 @@ export async function setOrderStatusAction(form: FormData): Promise<void> {
   await requireAdmin();
   const orderId = id(form, "id");
   const status = str(form, "status", 20) as OrderStatus;
-  if (orderId && STATUSES.includes(status)) setOrderStatus(orderId, status);
+  if (orderId && STATUSES.includes(status)) await setOrderStatus(orderId, status);
   revalidatePath("/ms/orders");
   revalidatePath("/ms");
 }
@@ -476,7 +476,7 @@ export async function saveCustomerAction(form: FormData): Promise<void> {
   await requireAdmin();
   const customerId = id(form, "id");
   if (!customerId) return;
-  updateCustomerNotes(customerId, {
+  await updateCustomerNotes(customerId, {
     notes: str(form, "notes", 400),
     marketing_opt_in: bool(form, "marketing_opt_in"),
   });
@@ -486,7 +486,7 @@ export async function saveCustomerAction(form: FormData): Promise<void> {
 export async function deleteCustomerAction(form: FormData): Promise<void> {
   await requireAdmin();
   const customerId = id(form, "id");
-  if (customerId) deleteCustomer(customerId);
+  if (customerId) await deleteCustomer(customerId);
   revalidatePath("/ms/customers");
   revalidatePath("/ms");
 }
@@ -506,7 +506,7 @@ export async function saveSettingsAction(
     return { ok: false, error: "Enter the WhatsApp number in full, e.g. 254712345678." };
   }
 
-  updateSettings({
+  await updateSettings({
     site_name: str(form, "site_name", 60) || "Jata Cafe",
     tagline: str(form, "tagline", 80),
     hero_kicker: str(form, "hero_kicker", 120),

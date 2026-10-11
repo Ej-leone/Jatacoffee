@@ -16,8 +16,8 @@ export default async function CategoriesPage({
   const params = await searchParams;
   const editId = positiveInt(params.edit);
 
-  const categories = listCategories({ includeHidden: true });
-  const items = listMenu({});
+  const categories = await listCategories({ includeHidden: true });
+  const items = await listMenu({});
 
   const counts = new Map<number, number>();
   for (const item of items) {

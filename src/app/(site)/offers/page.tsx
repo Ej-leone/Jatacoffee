@@ -26,10 +26,10 @@ function scopeText(promo: Promotion, categories: Category[], itemNames: Map<numb
 }
 
 export default async function OffersPage() {
-  const settings = getSettings();
-  const categories = listCategories({ includeHidden: true });
-  const promotions = listPromotions({ activeOnly: true });
-  const itemNames = new Map(listMenu().map((item) => [item.id, item.name]));
+  const settings = await getSettings();
+  const categories = await listCategories({ includeHidden: true });
+  const promotions = await listPromotions({ activeOnly: true });
+  const itemNames = new Map((await listMenu()).map((item) => [item.id, item.name]));
   const clock = nairobiClock();
 
   const live = promotions.filter((p) => isPromotionLive(p, clock));

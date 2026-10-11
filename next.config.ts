@@ -1,8 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // better-sqlite3 and sharp are native modules: never bundle them.
-  serverExternalPackages: ["better-sqlite3", "sharp"],
+  // sharp is a native module: never bundle it.
+  serverExternalPackages: ["sharp"],
 
   // Low-data target: ship modern formats and small responsive widths.
   images: {

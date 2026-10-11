@@ -18,11 +18,11 @@ export default async function DeliveryPage({
   const params = await searchParams;
   const editId = positiveInt(params.edit);
 
-  const settings = getSettings();
+  const settings = await getSettings();
   const currency = settings.currency;
-  const zones = listZones({});
+  const zones = await listZones({});
 
-  const editing = editId ? getZone(editId) : null;
+  const editing = editId ? await getZone(editId) : null;
   const missingEdit = editId !== null && editing === null;
 
   return (

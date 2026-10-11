@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 };
 
 export default async function CheckoutPage() {
-  const settings = getSettings();
+  const settings = await getSettings();
 
   return (
     <section className="container-page pt-6">

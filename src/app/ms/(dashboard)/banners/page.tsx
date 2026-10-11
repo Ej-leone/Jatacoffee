@@ -17,8 +17,8 @@ export default async function BannersPage({
   const params = await searchParams;
   const editId = positiveInt(params.edit);
 
-  const banners = listBanners({});
-  const editing = editId ? getBanner(editId) : null;
+  const banners = await listBanners({});
+  const editing = editId ? await getBanner(editId) : null;
   const missingEdit = editId !== null && editing === null;
 
   return (

@@ -38,8 +38,8 @@ insert into settings (key, value) values ('delivery_flat_fee_cents', '10000') on
 insert into settings (key, value) values ('free_delivery_threshold_cents', '250000') on conflict (key) do nothing;
 insert into settings (key, value) values ('delivery_note', 'Rider leaves the cafe within 10 minutes of confirmation. Pay cash or M-Pesa on delivery.') on conflict (key) do nothing;
 insert into settings (key, value) values ('min_order_cents', '20000') on conflict (key) do nothing;
-insert into settings (key, value) values ('instagram_url', 'https://instagram.com/jatacafe') on conflict (key) do nothing;
-insert into settings (key, value) values ('tiktok_url', '') on conflict (key) do nothing;
+insert into settings (key, value) values ('instagram_url', 'https://www.instagram.com/jata.cafe') on conflict (key) do nothing;
+insert into settings (key, value) values ('tiktok_url', 'https://www.tiktok.com/@jata.cafe') on conflict (key) do nothing;
 insert into settings (key, value) values ('facebook_url', '') on conflict (key) do nothing;
 insert into settings (key, value) values ('currency', 'KES') on conflict (key) do nothing;
 

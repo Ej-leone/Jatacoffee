@@ -16,9 +16,9 @@ export default async function CustomersPage({
   const params = await searchParams;
   const search = clampSearch(params.q);
 
-  const settings = getSettings();
+  const settings = await getSettings();
   const currency = settings.currency;
-  const customers = listCustomers({ limit: 200, search });
+  const customers = await listCustomers({ limit: 200, search });
 
   return (
     <>

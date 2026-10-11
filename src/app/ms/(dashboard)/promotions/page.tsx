@@ -24,13 +24,13 @@ export default async function PromotionsPage({
   const params = await searchParams;
   const editId = positiveInt(params.edit);
 
-  const promotions = listPromotions({});
-  const categories = listCategories({ includeHidden: true });
-  const items = listMenu({});
-  const settings = getSettings();
+  const promotions = await listPromotions({});
+  const categories = await listCategories({ includeHidden: true });
+  const items = await listMenu({});
+  const settings = await getSettings();
   const currency = settings.currency;
 
-  const editing = editId ? getPromotion(editId) : null;
+  const editing = editId ? await getPromotion(editId) : null;
   const missingEdit = editId !== null && editing === null;
 
   const categoryNames = new Map(categories.map((c) => [c.id, c.name]));

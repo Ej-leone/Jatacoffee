@@ -6,7 +6,7 @@ import { getSettings } from "@/lib/queries";
 export const metadata = { title: "Settings" };
 
 export default async function SettingsPage() {
-  const settings = getSettings();
+  const settings = await getSettings();
 
   return (
     <>

@@ -16,7 +16,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "Enter a valid code." }, { status: 400 });
   }
 
-  const promotion = findPromotionByCode(code);
+  const promotion = await findPromotionByCode(code);
   if (!promotion) {
     return NextResponse.json(
       { ok: false, error: "We don't recognise that code." },

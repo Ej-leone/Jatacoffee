@@ -1,0 +1,182 @@
+{
+  "verdict": "PASS",
+  "findings": [
+    {
+      "severity": "non-blocking",
+      "scope": "storefront (pre-existing, not part of the /ms admin build)",
+      "check": "next/image optimizer rejects unconfigured quality values",
+      "detail": "The image optimizer returns HTTP 400 for quality 62 and 72. Reproduced twice, stable: GET /_next/image?url=%2Fimg%2Fgenerated%2Fdesserts.webp&w=640&q=62 -> 400, q=72 -> 400, q=70 -> 200, q=75 -> 200. next.config.ts sets images.formats/deviceSizes/imageSizes but no images.qualities, so Next 16 only permits its default set. Affected source: src/components/hero-banners.tsx:52 (quality={index === 0 ? 72 : 62}) and src/app/(site)/page.tsx:138 (quality={62}). src/components/menu-item-card.tsx:39 uses 70 and is fine. Effect: hero banner images and the home category tiles serve 400 instead of an optimized image. Fix would be adding qualities: [62, 70, 72, 75] to next.config.ts images, or changing the quality props to an allowed value. Does NOT affect any /ms route and does not gate this verdict."
+    },
+    {
+      "severity": "observation",
+      "scope": "test-harness state pollution, not a code defect",
+      "check": "forced-password gate on /ms",
+      "detail": "On the FIRST harness run the gate did not fire: GET /ms with a valid session returned 200 instead of 307 -> /ms/password while admin_users.must_change_password was still 1. That run started against polluted state: the DB already held 1 leftover session row from an earlier step, and the dev server had just been force-killed and restarted over the same .next directory. After resetting the DB to its seeded state and restarting the dev server cleanly, the gate fired correctly on three independent runs (307 -> /ms/password for /ms and for every other dashboard route). Treated as stale-state/stale-.next contamination rather than a product bug, but recorded here for transparency."
+    }
+  ],
+  "checks": {
+    "1_typecheck": {
+      "command": "npm run typecheck",
+      "exitCode": 0,
+      "result": "CLEAN",
+      "output": "> jata-cafe@1.0.0 typecheck\n> tsc --noEmit\n(no diagnostics)"
+    },
+    "2_build": {
+      "command": "npm run build",
+      "exitCode": 0,
+      "result": "NO ERRORS",
+      "nextVersion": "16.4.0 (Turbopack)",
+      "notes": "Compiled successfully in 2.9s; TypeScript finished in 1391ms; 14/14 static pages generated. cookies() is awaited in src/lib/auth.ts; src/lib/admin-actions.ts carries \"use server\" at the top.",
+      "msRoutesInManifest": [
+        "/ms",
+        "/ms/banners",
+        "/ms/categories",
+        "/ms/customers",
+        "/ms/delivery",
+        "/ms/login",
+        "/ms/menu",
+        "/ms/orders",
+        "/ms/password",
+        "/ms/promotions",
+        "/ms/settings"
+      ],
+      "allMsRoutesDynamic": true
+    },
+    "3_http_flow": {
+      "server": "npm run dev, detached, port 3000, restarted clean before the authoritative run",
+      "harness": "server actions invoked over real HTTP using the Next-Action header with bodies built by next/dist/shared/lib/server-reference-info omitUnusedArgs + react-server-dom-turbopack encodeReply, i.e. the same wire format the browser sends",
+      "GET /ms/login": {
+        "status": 200,
+        "hasEmailInput": true,
+        "hasPasswordInput": true,
+        "result": "PASS - the 404 the user reported is gone"
+      },
+      "GET /ms logged out": {
+        "status": 307,
+        "location": "/ms/login",
+        "followedStatus": 200,
+        "followedLocation": null,
+        "result": "PASS - single hop, no redirect loop"
+      },
+      "login with seeded credentials": {
+        "credentials": "admin@jatacafe.co.ke / ChangeMe@Jata2026",
+        "actionStatus": 200,
+        "setCookie": "jata_session=<token>; Path=/; HttpOnly; SameSite=lax; Expires=+7d",
+        "sessionCookieSet": true,
+        "actionRedirect": "/ms;push",
+        "sessionRowsAfter": 1,
+        "result": "PASS"
+      },
+      "forced password change": {
+        "GET /ms with session": { "status": 307, "location": "/ms/password" },
+        "GET /ms/password": { "status": 200, "hasNewPasswordInput": true },
+        "gatedRoutesWhileMustChangePassword": {
+          "/ms": "307 -> /ms/password",
+          "/ms/orders": "307 -> /ms/password",
+          "/ms/menu": "307 -> /ms/password",
+          "/ms/categories": "307 -> /ms/password",
+          "/ms/banners": "307 -> /ms/password",
+          "/ms/promotions": "307 -> /ms/password",
+          "/ms/delivery": "307 -> /ms/password",
+          "/ms/customers": "307 -> /ms/password",
+          "/ms/settings": "307 -> /ms/password",
+          "/ms/password": "200"
+        },
+        "result": "PASS - expected gating, reached the forced password screen"
+      },
+      "wrong password rejected": {
+        "passwordTried": "TotallyWrong@123",
+        "actionStatus": 200,
+        "sessionCookieSet": false,
+        "sessionRowsBefore": 0,
+        "sessionRowsAfter": 0,
+        "bodyContainsError": true,
+        "result": "PASS - rejected, no session created"
+      },
+      "password change then re-login": {
+        "changePasswordActionStatus": 200,
+        "actionRedirect": "/ms/login?changed=1;push",
+        "mustChangePasswordAfter": 0,
+        "sessionRowsAfter": 0,
+        "reLoginWithNewPassword": "200, jata_session set",
+        "result": "PASS - old sessions cleared, re-login works"
+      },
+      "all /ms pages with a full session": {
+        "/ms": 200,
+        "/ms/orders": 200,
+        "/ms/menu": 200,
+        "/ms/categories": 200,
+        "/ms/banners": 200,
+        "/ms/promotions": 200,
+        "/ms/delivery": 200,
+        "/ms/customers": 200,
+        "/ms/settings": 200,
+        "/ms/password": 200,
+        "editScreens": {
+          "/ms/menu?edit=1": 200,
+          "/ms/categories?edit=1": 200,
+          "/ms/banners?edit=1": 200,
+          "/ms/promotions?edit=1": 200,
+          "/ms/delivery?edit=1": 200
+        },
+        "serverLogRuntimeErrors": "none - no stack traces, no digest lines, no 500s in stdout, stderr or .next/dev/logs/next-development.log; stderr contained only next/image quality warnings and a scroll-behavior hint",
+        "result": "PASS"
+      },
+      "old admin urls": {
+        "GET /admin": 404,
+        "GET /admin/login": 404,
+        "result": "PASS"
+      },
+      "storefront staff link removed": {
+        "GET /": 200,
+        "containsStaffLoginText": false,
+        "containsHrefToMs": false,
+        "result": "PASS"
+      },
+      "robots.txt": {
+        "status": 200,
+        "body": "User-Agent: *\nAllow: /\nDisallow: /ms\nDisallow: /ms/\nDisallow: /api/\nDisallow: /checkout\n\nHost: https://jatacafe.co.ke\nSitemap: https://jatacafe.co.ke/sitemap.xml\n",
+        "disallowsMs": true,
+        "result": "PASS"
+      }
+    },
+    "4_admin_string_grep": {
+      "pattern": "\"/admin",
+      "scope": "all of c:\\Users\\Eliza\\Desktop\\Jata\\src, recursive",
+      "matches": 0,
+      "result": "PASS - ZERO matches",
+      "note": "A broader grep for /admin matches only module-resolution aliases (@/lib/admin-actions, @/components/admin/*) and the literal 'Jata admin' heading, never a URL path. A supplementary grep for ['\\\"`]/admin also returned zero, and a grep for 'Staff login' returned zero."
+    },
+    "5_price_round_trip": {
+      "method": "POST saveMenuItemAction over HTTP with a valid session, then read the row straight out of data\\jata.sqlite",
+      "itemId": 1,
+      "itemName": "Spanish Latte",
+      "priceCentsBefore": 35000,
+      "shillingsEntered": 365,
+      "expectedPriceCents": 36500,
+      "actualPriceCents": 36500,
+      "exactly100x": true,
+      "actionRedirect": "/ms/menu?saved=1;push",
+      "formRendersValueBackAs": "365",
+      "result": "PASS - no 100x error; shillingsToCents in src/lib/admin-actions.ts and centsToShillingInput in src/lib/admin-format.ts round-trip exactly"
+    },
+    "6_cleanup": {
+      "devServerStopped": true,
+      "port3000": "stopped",
+      "tempScriptsDeleted": [
+        "tmp-verify.mjs",
+        "tmp-reset.mjs",
+        "tmp-probe.mjs",
+        "tmp-verify-output.json"
+      ],
+      "dbRestored": {
+        "admin_users.must_change_password": 1,
+        "admin_users.password": "ChangeMe@Jata2026 (seeded value re-hashed, verified by a fresh HTTP login)",
+        "sessions": 0,
+        "login_attempts": 0,
+        "menu_items.id=1.price_cents": 35000
+      },
+      "gitStatus": "clean - no source files were modified by this verification"
+    }
+  }
+}

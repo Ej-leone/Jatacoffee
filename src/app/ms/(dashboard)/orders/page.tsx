@@ -27,9 +27,9 @@ export default async function OrdersPage({
   const status = isOrderStatus(statusRaw) ? statusRaw : "all";
   const search = clampSearch(params.q);
 
-  const settings = getSettings();
+  const settings = await getSettings();
   const currency = settings.currency;
-  const orders = listOrders({ limit: 100, status, search });
+  const orders = await listOrders({ limit: 100, status, search });
 
   return (
     <>

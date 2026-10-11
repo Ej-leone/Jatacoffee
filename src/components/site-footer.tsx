@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ClockIcon, InstagramIcon, Logo, PhoneIcon, PinIcon } from "./icons";
+import { ClockIcon, InstagramIcon, Logo, PhoneIcon, PinIcon, TikTokIcon } from "./icons";
 import type { SiteSettings } from "@/lib/types";
 
 export function SiteFooter({ settings }: { settings: SiteSettings }) {
@@ -110,6 +110,17 @@ export function SiteFooter({ settings }: { settings: SiteSettings }) {
                 >
                   <InstagramIcon size={14} />
                   Instagram
+                </a>
+              )}
+              {settings.tiktok_url && (
+                <a
+                  href={settings.tiktok_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn !min-h-9 border border-cream-100/25 !px-3.5 !text-xs text-cream-100 hover:bg-cream-100/10"
+                >
+                  <TikTokIcon size={14} />
+                  TikTok
                 </a>
               )}
             </div>

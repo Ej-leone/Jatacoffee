@@ -71,7 +71,7 @@ export async function POST(request: Request) {
 
   if (wanted.length === 0) return bad("Your cart is empty.");
 
-  const dbItems = getMenuItemsByIds(wanted.map((item) => item.id));
+  const dbItems = await getMenuItemsByIds(wanted.map((item) => item.id));
   const byId = new Map(dbItems.map((item) => [item.id, item]));
 
   const missing = wanted.filter((item) => !byId.has(item.id));
@@ -105,7 +105,7 @@ export async function POST(request: Request) {
 
   /* ---------------- customer ---------------- */
 
-  const settings = getSettings();
+  const settings = await getSettings();
   const orderType = payload.orderType === "pickup" ? "pickup" : "delivery";
 
   const phone = normalizeKenyanPhone(payload.phone ?? "");
@@ -133,7 +133,7 @@ export async function POST(request: Request) {
     if (settings.delivery_mode === "zone") {
       const requested = Number(payload.zoneId);
       if (!Number.isInteger(requested)) return bad("Choose your delivery area.");
-      const zone = getZone(requested);
+      const zone = await getZone(requested);
       if (!zone || zone.is_active === 0) return bad("That delivery area is not available.");
       zoneId = zone.id;
       zoneName = zone.name;
@@ -151,7 +151,7 @@ export async function POST(request: Request) {
   let acceptedCode: string | null = null;
 
   if (requestedCode) {
-    const promo = findPromotionByCode(requestedCode);
+    const promo = await findPromotionByCode(requestedCode);
     if (promo) {
       unlockedIds = [promo.id];
       acceptedCode = requestedCode;
@@ -161,7 +161,7 @@ export async function POST(request: Request) {
 
   const pricing = computePricing({
     lines,
-    promotions: listPublicPromotions(),
+    promotions: await listPublicPromotions(),
     unlockedPromotionIds: unlockedIds,
     orderType,
     deliveryMode: settings.delivery_mode,
@@ -178,7 +178,7 @@ export async function POST(request: Request) {
 
   /* ---------------- persist + build message ---------------- */
 
-  const reference = nextOrderReference();
+  const reference = await nextOrderReference();
 
   const orderLines: OrderLine[] = lines.map((line) => ({
     menu_item_id: line.id,
@@ -189,7 +189,7 @@ export async function POST(request: Request) {
   }));
 
   try {
-    recordOrder({
+    await recordOrder({
       reference,
       phone,
       customer_name: name,
@@ -214,12 +214,12 @@ export async function POST(request: Request) {
     });
 
     if (pricing.applied.length > 0) {
-      incrementPromotionUsage(
+      await incrementPromotionUsage(
         pricing.applied.filter((p) => unlockedIds.includes(p.id)).map((p) => p.id),
       );
     }
 
-    logEvent("whatsapp_checkout", {
+    await logEvent("whatsapp_checkout", {
       reference,
       order_type: orderType,
       total_cents: pricing.total_cents,
